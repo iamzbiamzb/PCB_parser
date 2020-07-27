@@ -1,0 +1,33 @@
+4 net not in dcf
+b_06 electricalNet
+b_08 diff only one DDR4_MDQSN2 DDR4_MDQS2
+		electricalNet DDR4_ODT0
+b_09
+	MG_DDR_ADD same net same group differnet pin pair len??
+b_11
+	same electricalCSet different diff pair
+b_16
+	path not found S3 CA3
+	1200.78,207.05
+	_clp_path  = (_clpPathStart (list (_clpAdjustPt 1205.7:207.05 _clp_cinfo))
+		(_clpMKSConvert 1.970000 _clp_cinfo->t_from_units _clp_cinfo->t_to_units))
+	_clp_path = (_clpPathArcCenter _clp_path (_clpMKSConvert 1.970000 _clp_cinfo->t_from_units
+		_clp_cinfo->t_to_units) (_clpAdjustPt 1205.7:207.05 _clp_cinfo) nil
+	 	(_clpAdjustPt 1200.78:207.05 _clp_cinfo))
+	_clpPl = list(
+		list("CLIP_DRAWING" _clp_clip_prop_value))
+	_clp_dbid = _clpDBCreatePath(_clp_path "PACKAGE GEOMETRY/ASSEMBLY_TOP" 'line _clp_sym _clpPl)
+	_clpPl = nil
+	pin U4.D3
+	net EBI2_AD2 U3.G27 U4.D3
+	EBI2_BUSY_N not in any net
+	EBI2_WE_N
+	UIMI_DETECT
+b_17
+	no netgroup matchgroup
+b_18
+	U18.F3 U1.B29
+	pin pair ref in sereverl group
+
+
+python3 DCF_parser.py [clp_name].clp [txt_name].txt [dcf_name].dcf [output_name]
