@@ -31,3 +31,40 @@ b_18
 
 
 python3 DCF_parser.py [clp_name].clp [txt_name].txt [dcf_name].dcf [output_name]
+
+4
+	所以是所有在txt裡的都要繞?
+7
+	不太確定不會案
+	DDR_DQ{1}
+
+b_02
+	net information ex: pin
+
+b_11
+	是同個electricalCSet有很多diff pair
+b_08有自己的len
+	diff  match
+b_17
+	好像真的net都要連?
+b_18 
+	的確兩個都要match
+
+
+有很多length matching的資訊要加
+
+
+update:
+	所有net在txt 兩邊都有pin位置的 都加入要繞的net
+	多一個net file 紀錄 該net所有的rule
+
+
+b_11
+	group 的 line tolernce
+	MG_RGMII_RX
+
+1 diffpair DDR_CLK_N/P 沒有tolerence
+被多個rule 規範的要特別處理嗎
+	還是把所有net的rule都做出來
+
+

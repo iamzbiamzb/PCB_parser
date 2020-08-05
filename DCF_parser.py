@@ -7,10 +7,6 @@ import sys
 import re
 
 
-def Normalize (number):
-	EPS = 1e-9
-	return float(number) / 1000.0 + EPS;
-
 def output_gds(chipDict, ID_TypeDict, UsedPinDict, chipLayerDict, output_name, layerDict):
 	
 	# timeseq = "1995-04-17 18:00:00"
@@ -36,12 +32,6 @@ def output_gds(chipDict, ID_TypeDict, UsedPinDict, chipLayerDict, output_name, l
 
 		if chip_name in chipLayerDict:
 			layer = chipLayerDict[chip_name]
-		# gds_layer = -1
-		# if(layer == "TOP"):
-		# 	gds_layer = 0
-		# if(layer == "BOTTOM"):
-		# 	gds_layer = 1
-		
 
 		chip_type = ID_TypeDict[chip_name]
 
@@ -156,14 +146,10 @@ chipAllPinDict={}
 ID_TypeDict={}
 line = file.readline()
 count = 0
-
-
-
 chipLayerDict = {}
 
-# Parse Pin info
+################    Pininfo   ################
 while line:
-
 	if line.find('_clpDBCreateText')!=-1:
 		chip_name=line.split('"')[1]
 		line = file.readline()
@@ -204,7 +190,7 @@ while line:
 	line = file.readline()
 file.close()
 
-# Parse Net info
+################    Netinfo   ################
 file = open(netlist_name,'r')
 netF=0
 netChangeLine=0
@@ -300,18 +286,15 @@ while line:
 file.close()
 
 
+AllNetRule = {}
+for key,values in netDict.items():
+	tmp = [["pin",tmp]]
+	AllNetRule[keys] = tmp
 
-# 
-#print(netDict)
-#Signal Pin pair info
-pinPairDict = {}
-Final_Net_Dict = {}
-#file=open(dcf_name,'r')
+################    Layer   ################
 layerDict={}
 with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 	line=file.readline()
-
-
 	laayer_count = 0;
 	while line:
 		if line.find('( layer "')!=-1:
@@ -321,8 +304,11 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 					layerDict[layer_name] = laayer_count
 					laayer_count = laayer_count + 1
 		line=file.readline()
-	#print(layerDict)
 
+pinPairDict = {}
+Final_Net_Dict = {}
+
+################    PinPairRef   ################
 with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 	line=file.readline()
 	while line:
@@ -352,13 +338,9 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 		if line.find('( signal "')!=-1:
 			continue
 		line=file.readline()
-	#file.close()
-# print("Final_Net_Dict")
-# print(Final_Net_Dict)
-# print("pinPairDict")
-# print(pinPairDict)
-#Net class
-#file=open(dcf_name,'r')
+
+
+################    DRC   ################
 Wire_Width_Dict = {}
 Wire_Space_Dict = {}
 with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
@@ -387,9 +369,8 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 		line=file.readline()
 
 
-# print(Wire_Space_Dict)
-# print(Wire_Width_Dict)
 
+################    DRC   ################
 with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 	line=file.readline()
 	netClassDict = {}
@@ -425,18 +406,13 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 			for i in range(0,len(net_member)):
 				netClassDict[net_member[i]] = net_class_name
 		line=file.readline()
-#file.close()
 
-# print("netClassDict")
-# print(netClassDict)
-# print("physical_Dict")
-# print(physical_Dict)
-# print("spacing_Dict")
-# print(spacing_Dict)
 
-#diff
+
+################    DIFFPAIR   ################
 elediffDict = {}
 diffDict = {}
+diffRule = {}
 with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 	line=file.readline()
 
@@ -446,35 +422,24 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 			diff_class_name = line.split('"')[1]
 			line=file.readline()
 			while line.find('( member (') == -1:
-				#print(line)
 				if line.find('( electricalCSetRef "')!=-1:
 					elename = line.split('"')[1]
-					elediffDict[elename] = diff_class_name
+					elediffDict[diff_class_name] = elename
+				if line.find('DIFFP_PHASE_TOL')!=-1:
+					diffRule[diff_class_name] = line.split('"')[3].split(' ')[0]
 				line=file.readline()
-			#print(line)
 			while line.find("( member (") != -1:
-				#print(line)
 				diff_net_name = line.split('"')[1]
-				# print(diff_net_name)
-				# print(">>")
 				diff_list.append(diff_net_name)
 				line=file.readline()
 			diffDict[diff_class_name] = diff_list
 		line=file.readline()
 
-diff_file = open(output_name+'.diff','w')
-for keys, values in diffDict.items():
-	for i in values:
-		diff_file.write(i+" "+keys+"\n")
-diff_file.close()
-
-#print(pinPairDict)
-#print(diffDict)
-#Match Group
+################    GROUP   ################
 tmpset = set()
 UsedPinDict = {}
 groupDict = {}
-#file=open(dcf_name,'r')
+groupTolenece = {}
 drc_file = open(output_name+'.drc','w')
 with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 	line=file.readline()
@@ -488,6 +453,7 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 			while(True):
 				if line.find('"RELATIVE_PROPAGATION_DELAY"')!=-1:
 					Tolerence = line.split('"')[3]
+					groupTolenece[group_name] = Tolerence
 					#print("\tTolerence: " + str(Tolerence))
 				if line.find('( member ( pinPairRef "')!=-1:
 					pairBuf0=line.split('"')[1].split(':')[0]
@@ -507,6 +473,8 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 						print(pin_pair_str.rstrip())
 						tmplist = [ str(pinPairDict[key]), key ]
 						groupnetnamelist.append(tmplist)
+						if group_name in groupTolenece:
+							AllNetRule[pinPairDict[key]].append(["GROUP:PinPair",groupTolenece[group_name],key])
 						if netClassDict.get(pinPairDict[key], 'noExist') != 'noExist':
 							#print("net "+pinPairDict[key],end=' ')
 							#print(str(pairBuf0) + ' ' + str(pairBuf1))
@@ -536,7 +504,8 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 					if Final_Net_Dict.get(Net_Name, 'noExist') != 'noExist':
 						#print("\t\tReference Pin-Pair:" + Final_Net_Dict[Net_Name].rstrip())
 						#print(Net_Name)	
-						
+						if group_name in groupTolenece:
+							AllNetRule[Net_Name].append(["GROUP:Net",groupTolenece[group_name]])
 						pin_pair_list = Final_Net_Dict[Net_Name].rstrip().split(' ')
 						for pin_pair in pin_pair_list:
 							UsedPinDict[pin_pair.rstrip()] = 1
@@ -574,13 +543,14 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 						if i in Final_Net_Dict:
 							print("net " + i + " " +Final_Net_Dict[i].rstrip().replace('\n',' '))
 							pin_pair_list = Final_Net_Dict[i].rstrip().split(' ')
+							if group_name in groupTolenece:
+								AllNetRule[i].append(["GROUP:Net",groupTolenece[group_name]])
 							for pin_pair in pin_pair_list:
 								UsedPinDict[pin_pair.rstrip()] = 1
 							if netClassDict.get(i, 'noExist') != 'noExist':
 								net_class_name = netClassDict[i]
 								drc_file.write(str(i) + " " + Wire_Width_Dict[physical_Dict[net_class_name]] + " " + Wire_Space_Dict[spacing_Dict[net_class_name]]+ "\n")
-							else:
-								
+							else:	
 								drc_file.write(str(i) + " " + Wire_Width_Dict["DEFAULT"] + " " + Wire_Space_Dict["DEFAULT"]+ "\n")
 							tmplist = [ i , Final_Net_Dict[i].rstrip().replace('\n',' ') ]
 							groupnetnamelist.append(tmplist)
@@ -597,59 +567,94 @@ with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 				line=file.readline()
 		line=file.readline()
 
-electricalDict = set()
+
+################    electricalCSet   ################
+electricalDict = {}
 with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
 	line=file.readline()
+
 	while line:
 		if line.find('( electricalCSet "')!=-1:
-			electricalDict.add(line.split('"')[1])
+			name = line.split('"')[1]
+			line=file.readline()
+			while line:
+				if line.find("DIFFP_PHASE_TOL")!=-1:
+					electricalDict[name] = line.split('"')[3].split(" ")[0]
+					break
+				if line.find('( electricalCSet "')!=-1:
+					electricalDict[name] = "DEFAULT"
+					break
+				line=file.readline()
+			continue
 		line=file.readline()
 
-# print("electricalDict")
-# print(electricalDict)
+
+
+################    electricalCSet   ################
+diffRule2 = {}
 for i in electricalDict:
 	if i not in tmpset and i != 'DEFAULT':
-		if i in elediffDict:
-			print("group "+elediffDict[i])
-			groupnetnamelist = []
-			for j in diffDict[elediffDict[i]]:
-				if j in Final_Net_Dict:
-					print("net "+j,end=' ')
-					print(Final_Net_Dict[j].rstrip().replace('\n',' '))
-					pin_pair_list = Final_Net_Dict[j].rstrip().split(' ')
-					for pin_pair in pin_pair_list:
-						UsedPinDict[pin_pair.rstrip()] = 1
-					if netClassDict.get(j, 'noExist') != 'noExist':
-						net_class_name = netClassDict[j]
-						drc_file.write(str(j) + " " + Wire_Width_Dict[physical_Dict[net_class_name]] + " " + Wire_Space_Dict[spacing_Dict[net_class_name]]+ "\n")
-					else:
-						drc_file.write(str(j) + " " + Wire_Width_Dict["DEFAULT"] + " " + Wire_Space_Dict["DEFAULT"]+ "\n")
-					tmplist = [ j , Final_Net_Dict[j].rstrip().replace('\n',' ') ]
-					groupnetnamelist.append(tmplist)
-			groupDict[elediffDict[i]] = groupnetnamelist
+		for j,k in elediffDict.items():
+			if k == i:
+				print("group "+j)
+				diffRule2[j] = electricalDict[i]
+				groupnetnamelist = []
+				for l in diffDict[j]:
+					if l in Final_Net_Dict:
+						print("net "+l,end=' ')
+						print(Final_Net_Dict[l].rstrip().replace('\n',' '))
+
+						pin_pair_list = Final_Net_Dict[l].rstrip().split(' ')
+						for pin_pair in pin_pair_list:
+							UsedPinDict[pin_pair.rstrip()] = 1
+						if netClassDict.get(l, 'noExist') != 'noExist':
+							net_class_name = netClassDict[l]
+							drc_file.write(str(j) + " " + Wire_Width_Dict[physical_Dict[net_class_name]] + " " + Wire_Space_Dict[spacing_Dict[net_class_name]]+ "\n")
+						else:
+							drc_file.write(str(j) + " " + Wire_Width_Dict["DEFAULT"] + " " + Wire_Space_Dict["DEFAULT"]+ "\n")
+						tmplist = [ l , Final_Net_Dict[l].rstrip().replace('\n',' ') ]
+						groupnetnamelist.append(tmplist)
+				groupDict[i] = groupnetnamelist
+
+
+
+
+
 drc_file.close()
 
+################    Write   ################
+
 os.system("python InputParser.py " + clp_name + " " + netlist_name + " " + output_name + ".netlist")
-
-
-
+output_gds(chipDict, ID_TypeDict, UsedPinDict, chipLayerDict,output_name, layerDict)
 
 group_file = open(output_name+'.group','w')
 for keys, values in groupDict.items():
 	for i in values:
-		#tmpset.add(i[0])
 		group_file.write(i[0]+" "+i[1].replace(":"," ")+" "+keys+"\n")
 group_file.close()
 
+rule_file = open(output_name+'.rule','w')
+rule_file.write("group\n")
+for keys, values in groupTolenece.items():
+	rule_file.write(keys+" "+values+"\n")
+rule_file.write("Differntial\n")
+for keys, values in diffRule2.items():
+	rule_file.write(keys+" "+values+"\n")
+for keys, values in diffRule.items():
+	rule_file.write(keys+" "+values+"\n")
+rule_file.close()
+
+
+diff_file = open(output_name+'.diff','w')
+for keys, values in diffDict.items():
+	for i in values:
+		diff_file.write(i+" "+keys+"\n")
+diff_file.close()
 
 set_file = open(output_name+'.set','w')
 for i in tmpset:
 	set_file.write(i+"\n")
 set_file.close()
-
-
-
-output_gds(chipDict, ID_TypeDict, UsedPinDict, chipLayerDict,output_name, layerDict)
 
 layer_file = open(output_name+'.layer','w')
 layer_file.write(str(len(layerDict))+"\n")
@@ -657,66 +662,5 @@ for keys, values in layerDict.items():
 	layer_file.write(keys+" "+str(values)+"\n")
 layer_file.close()
 
-
-"""
-for i,j in chipDict.items():
-
-	chip_name = i.split('.')[0]
-
-	chip_type = ID_TypeDict[chip_name]
-
-	width = 0
-	height = 0
-
-	last_char = chip_type[-1]
-
-	if last_char == 'C':
-		#circle
-		if chip_type.find('0P')!=-1:
-			matchObj = re.match(r'(.*)0P([0-9]*)C', chip_type)
-			width = float("0." + str(matchObj.group(2)))
-			height= float("0." + str(matchObj.group(2)))
-		else:
-			matchObj = re.match(r'([a-zA-Z]*)([0-9]*)C', chip_type)
-			width = float(str(matchObj.group(2)))
-			height= float(str(matchObj.group(2)))
-
-	elif last_char == 'S':
-		#square
-		if chip_type.find('0P')!=-1:
-			matchObj = re.match(r'(.*)0P([0-9]*)S', chip_type)
-			#print('a' + matchObj.group(2))
-			width = float("0." + str(matchObj.group(2)))
-			height= float("0." + str(matchObj.group(2)))
-		else:
-			matchObj = re.match(r'([a-zA-Z]*)([0-9]*)S', chip_type)
-			#print('b' + matchObj.group(2))
-			width = float(str(matchObj.group(2)))
-			height= float(str(matchObj.group(2)))
-	elif chip_type.find('X')!=-1:
-		#rectangle
-		matchObj = re.match(r'([a-zA-Z]+)([0-9]P[0-9]+|[0-9]+)X([0-9]P[0-9]+|[0-9]+)', chip_type)
-		#print(chip_type)
-		#str(matchObj.group(2)).replace('P','.')
-		#str(matchObj.group(3)).replace('P','.')
-		width = float(str(matchObj.group(2)).replace('P','.'))
-		height= float(str(matchObj.group(3)).replace('P','.'))
-	
-
-	if UsedPinDict.get(i, 'noExist') != 'noExist':
-		print("PinPad : " + i)
-		print("\t Coor : " + j)
-		print("\t Type : " + chip_type)
-		print("\t\t Width : " + str(width))
-		print("\t\t Height : " + str(height))
-	else:
-		print("ObsPad : " + i)
-		print("\t Coor : " + j)
-		print("\t Type : " + chip_type)
-		print("\t\t Width : " + str(width))
-		print("\t\t Height : " + str(height))
-
-	#print(i,j,chip_type,width,height)
-"""
 
 

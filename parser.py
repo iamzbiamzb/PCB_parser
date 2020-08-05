@@ -4,7 +4,7 @@ import os
 import sys
 import re
 
-test = True
+test = False
 
 casenumber = sys.argv[1]
 
@@ -13,7 +13,7 @@ inputdir = "../benchmarks/"
 
 os.system("rm -r "+outputdir)
 os.system("mkdir " + outputdir )
-os.system("python3 DCF_parser.py "+ inputdir + casenumber+".clp "+ inputdir + casenumber+".txt "+ inputdir + casenumber+".dcf "+ outputdir + casenumber+" > " + outputdir +"see"+casenumber)
+os.system("python3 DCF.py "+ inputdir + casenumber+".clp "+ inputdir + casenumber+".txt "+ inputdir + casenumber+".dcf "+ outputdir + casenumber+" > " + outputdir +"see"+casenumber)
 os.system("python3 CLP_Path_Parser.py "+inputdir +casenumber+".clp > " + outputdir + "path"+casenumber)
 
 if test == True:

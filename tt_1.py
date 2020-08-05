@@ -304,7 +304,7 @@ def nextpath(source,already):
 
 ######################## findpath ########################
 def findpath(grouplist,pathlist,line1,line2, target_layer, output_name, drc_name, routing_dir):
-	debug = False
+	debug = True
 	for i in pathlist:
 		if i[1] in global_dict:
 			global_dict[i[1]].append(i)
