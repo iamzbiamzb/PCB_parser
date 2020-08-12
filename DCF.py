@@ -632,6 +632,7 @@ print("++++++groupTolenece++++++")
 for i in groupTolenece:
 	print(i)
 	print(groupTolenece[i])
+print("++++++end++++++")
 
 drc_file = open(output_name+'.drc','w')
 for i in netDict:
@@ -672,7 +673,11 @@ for i,j in netRuleDict.items():
 	rule_file.write("Diff = " + str(j.diff) + "\n")
 	rule_file.write("Diff Rule START\n")
 	for z in j.diffRule:
-		rule_file.write(z[1]+" "+z[0][0]+ " " + z[0][1] + "\n")
+		print(z[0])
+		print(z[1])
+		for q in z[0]:
+			rule_file.write(z[1]+" "+q[0]+ " "+q[1] + "\n")	
+		
 	rule_file.write("Diff Rule END\n")
 
 	rule_file.write("Group = " + str(j.group) + "\n")
