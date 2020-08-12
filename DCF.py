@@ -3,6 +3,32 @@ import os
 import sys
 import re
 
+class Rule:
+	diff = 0
+	group = 0
+	target = 0
+	targetRule = []
+	diffRule = []
+	groupRule = []
+	def __init__(self):
+		self.diff = 0
+		self.group = 0
+		self.target = 0
+		self.diffRule = []
+		self.groupRule = []
+		self.targetRule = []
+	def setdiffRule(self, r):
+		self.diff = self.diff + 1
+		if r != "":
+			self.diffRule.append(r)
+	def setgroupRule(self, r):
+		self.group = self.group + 1
+		self.groupRule.append(r)
+	def settarget(self, r):
+		self.target = 1
+		self.targetRule.append(r)
+
+
 def output_gds(chipDict, ID_TypeDict, UsedPinDict, chipLayerDict, output_name, layerDict):
 	
 	obs_file = open(output_name+'.obs','w')
@@ -176,6 +202,8 @@ def pin_info(clp_name,layerDict):
 	file.close()
 	return chipDict,chipAllPinDict,ID_TypeDict,chipLayerDict
 
+
+
 def net(netlist_name):
 	file = open(netlist_name,'r')
 	netF=0
@@ -305,6 +333,45 @@ def used_net(dcf_name):
 			line=file.readline()
 		return pinPairDict,Final_Net_Dict
 
+def target(dcf_name):
+	SignalTargetDict = {}
+	PinpairTargetDict = {}
+	with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
+		line=file.readline()
+		while line:
+			if line.find('( signal "')!=-1:
+				signal_name = line.split('"')[1]
+				while(True):
+					line=file.readline()
+					if line.find('RELATIVE_PROPAGATION_DELAY')!=-1 and line.find('TARGET,TARGET')!=-1:
+						line = file.readline()
+						line = file.readline()
+						SignalTargetDict[signal_name] = line.split('"')[1]
+					if line.find('( objectStatus "')!=-1 or line.find('( signal "')!=-1:
+						break
+			if line.find('( signal "')!=-1:
+				continue
+			line=file.readline()
+
+	with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
+		line=file.readline()
+		while line:
+			if line.find('( pinPair "')!=-1:
+				pinpair_name = line.split('"')[1]
+				while(True):
+					line=file.readline()
+					if line.find('RELATIVE_PROPAGATION_DELAY')!=-1 and line.find('TARGET,TARGET')!=-1:
+						line = file.readline()
+						line = file.readline()
+						PinpairTargetDict[pinpair_name] = line.split('"')[1]
+					if line.find('( pinPair "')!=-1 or line.find('( electricalNet "')!=-1 or line.find('( signal "')!=-1:
+						break
+			if line.find('( pinPair "')!=-1:
+				continue
+			line=file.readline()
+
+	return SignalTargetDict, PinpairTargetDict
+
 def drc(dcf_name):
 	Wire_Width_Dict = {}
 	Wire_Space_Dict = {}
@@ -386,16 +453,22 @@ def diff(dcf_name):
 				tmplist = []
 				diff_class_name = line.split('"')[1]
 				line=file.readline()
+				
 				while line.find('( member (') == -1:
 					if line.find('( electricalCSetRef "')!=-1:
 						elename = line.split('"')[1]
 						diffRef[diff_class_name] = elename
+						
 					if line.find("DIFFP_PHASE_TOL")!=-1:
 						tmplist.append(["DIFFP_PHASE_TOL",line.split('"')[3]])
 					if line.find("PROPAGATION_DELAY_MAX")!=-1:
 						tmplist.append(["PROPAGATION_DELAY_MAX",line.split('"')[3]])
 					if line.find("PROPAGATION_DELAY_MIN")!=-1:
 						tmplist.append(["PROPAGATION_DELAY_MIN",line.split('"')[3]])
+					if line.find("TOTAL_ETCH_LENGTH_MIN")!=-1:
+						tmplist.append(["TOTAL_ETCH_LENGTH_MIN",line.split('"')[3]])
+					if line.find("TOTAL_ETCH_LENGTH_MAX")!=-1:
+						tmplist.append(["TOTAL_ETCH_LENGTH_MAX",line.split('"')[3]])
 					line=file.readline()
 				while line.find("( member (") != -1:
 					diff_net_name = line.split('"')[1]
@@ -423,7 +496,11 @@ def ele(dcf_name):
 						tmplist.append(["PROPAGATION_DELAY_MAX",line.split('"')[3]])
 					if line.find("PROPAGATION_DELAY_MIN")!=-1:
 						tmplist.append(["PROPAGATION_DELAY_MIN",line.split('"')[3]])
-					if line.find('( electricalCSet "')!=-1:
+					if line.find("TOTAL_ETCH_LENGTH_MIN")!=-1:
+						tmplist.append(["TOTAL_ETCH_LENGTH_MIN",line.split('"')[3]])
+					if line.find("TOTAL_ETCH_LENGTH_MAX")!=-1:
+						tmplist.append(["TOTAL_ETCH_LENGTH_MAX",line.split('"')[3]])
+					if line.find('( electricalCSet "')!=-1 or line.find('topologyData')!=-1:
 						electricalDict[name] = "DEFAULT"
 						break
 					line=file.readline()
@@ -432,7 +509,7 @@ def ele(dcf_name):
 			line=file.readline()
 	return electricalDict
 
-def Group(dcf_name,pinPairDict,Final_Net_Dict):
+def Group(dcf_name,pinPairDict,Final_Net_Dict,diffDict):
 	groupDict = {}
 	groupTolenece = {}
 	with open(dcf_name, 'r', errors='ignore',encoding="utf-8") as file:
@@ -450,28 +527,31 @@ def Group(dcf_name,pinPairDict,Final_Net_Dict):
 						tmplist.append(["PROPAGATION_DELAY_MAX",line.split('"')[3]])
 					if line.find("PROPAGATION_DELAY_MIN")!=-1:
 						tmplist.append(["PROPAGATION_DELAY_MIN",line.split('"')[3]])
+					if line.find("TOTAL_ETCH_LENGTH_MIN")!=-1:
+						tmplist.append(["TOTAL_ETCH_LENGTH_MIN",line.split('"')[3]])
+					if line.find("TOTAL_ETCH_LENGTH_MAX")!=-1:
+						tmplist.append(["TOTAL_ETCH_LENGTH_MAX",line.split('"')[3]])
 					if line.find('( member ( pinPairRef "')!=-1:
 						pairBuf0=line.split('"')[1].split(':')[0]
 						pairBuf1=line.split('"')[1].split(':')[1]
 						pin_pair_str = str(pairBuf0) + ' ' + str(pairBuf1)
 						key = str(pairBuf0) + ':' + str(pairBuf1)
 						if pinPairDict.get(key, 'noExist') != 'noExist':
-							tmplist = [ str(pinPairDict[key]), key ]
-							groupnetnamelist.append(tmplist)
+							tlist = [ str(pinPairDict[key]), key ]
+							groupnetnamelist.append(tlist)
 						member_check = 1
 					if line.find('( member ( signalRef "')!=-1:
 						Net_Name = line.split('"')[1]
 						if Final_Net_Dict.get(Net_Name, 'noExist') != 'noExist':
-							tmplist = [ Net_Name , Final_Net_Dict[Net_Name].rstrip().replace('\n',' ') ]
-							groupnetnamelist.append(tmplist)
+							tlist = [ Net_Name , Final_Net_Dict[Net_Name].rstrip().replace('\n',' ') ]
+							groupnetnamelist.append(tlist)
 						member_check = 1
 					if line.find('( member ( diffPairRef "')!=-1:
 						Net_Name = line.split('"')[1]
-						tmplist = [ i , Final_Net_Dict[i].rstrip().replace('\n',' ') ]
 						for i in diffDict[Net_Name]:
 							if i in Final_Net_Dict:
-								tmplist = [ i , Final_Net_Dict[i].rstrip().replace('\n',' ') ]
-								groupnetnamelist.append(tmplist)
+								tlist = [ i , Final_Net_Dict[i].rstrip().replace('\n',' ') ]
+								groupnetnamelist.append(tlist)
 						member_check = 1
 					if line.find('( member (')!=-1:
 						member_check = 1
@@ -482,6 +562,45 @@ def Group(dcf_name,pinPairDict,Final_Net_Dict):
 					line=file.readline()
 			line=file.readline()
 	return groupDict,groupTolenece
+
+def netrule(Final_Net_Dict,electricalDict,diffDict,diffRule,diffRef,groupDict,groupTolenece,SignalTargetDict,PinpairTargetDict):
+	netRuleDict = {}
+	for key,values in electricalDict.items():
+		for i,j in diffRef.items():
+			if j == key:
+				for z in diffDict[i]:
+					if z not in Final_Net_Dict:
+						continue
+					name = z+" "+Final_Net_Dict[z]
+					if name not in netRuleDict:
+						tmpRule = Rule()
+						netRuleDict[name] = tmpRule
+					if values != "":
+						netRuleDict[name].setdiffRule([values,i])
+					for k in diffRule[i]:
+						netRuleDict[name].setdiffRule([k,i])
+	for key,values in groupDict.items():
+		for i in groupTolenece[key]:	
+			for j in values:
+				name = j[0]+" "+j[1]
+				if name not in netRuleDict:
+					tmpRule = Rule()
+					netRuleDict[name] = tmpRule
+
+				netRuleDict[name].setgroupRule([i,key])
+				if j[0] in SignalTargetDict:
+					netRuleDict[name].settarget(key)
+				if j[1] in PinpairTargetDict:
+					netRuleDict[name].settarget(key)
+	return netRuleDict
+
+def Usedpin(Final_Net_Dict):
+	UsedPinDict = {}
+	for i,j in Final_Net_Dict.items():
+		arr = j.split(" ")
+		for z in arr:
+			UsedPinDict[z] = 1
+	return UsedPinDict
 
 clp_name = sys.argv[1]
 netlist_name = sys.argv[2]
@@ -495,8 +614,24 @@ pinPairDict,Final_Net_Dict = used_net(dcf_name)
 Wire_Width_Dict,Wire_Space_Dict,netClassDict,physical_Dict,spacing_Dict = drc(dcf_name)
 diffRef,diffDict,diffRule = diff(dcf_name)
 electricalDict = ele(dcf_name)
-groupDict,groupTolenece = Group(dcf_name,pinPairDict,Final_Net_Dict)
+groupDict,groupTolenece = Group(dcf_name,pinPairDict,Final_Net_Dict,diffDict)
+SignalTargetDict, PinpairTargetDict = target(dcf_name)
+UsedPinDict = Usedpin(Final_Net_Dict) 
+netRuleDict = netrule(Final_Net_Dict,electricalDict,diffDict,diffRule,diffRef,groupDict,groupTolenece,SignalTargetDict,PinpairTargetDict)
 
+
+print("++++++diffRule++++++")
+for i in diffRule:
+	print(i)
+	print(diffRule[i])
+print("++++++electricalDict++++++")
+for i in electricalDict:
+	print(i)
+	print(electricalDict[i])
+print("++++++groupTolenece++++++")
+for i in groupTolenece:
+	print(i)
+	print(groupTolenece[i])
 
 drc_file = open(output_name+'.drc','w')
 for i in netDict:
@@ -524,12 +659,38 @@ for keys, values in layerDict.items():
 	layer_file.write(keys+" "+str(values)+"\n")
 layer_file.close()
 
-print(netDict)
-UsedPinDict = {}
-for i,j in netDict.items():
-	arr = j.split(" ")
-	for z in arr:
-		UsedPinDict[z] = 1
+rule_file = open(output_name+'.rule','w')
+for i,j in netRuleDict.items():
+	rule_file.write(i+"\n")
+
+	rule_file.write("Target = " + str(j.target) + "\n")
+	rule_file.write("Target Rule START\n")
+	for z in j.targetRule:
+		rule_file.write(z+"\n")
+	rule_file.write("Target Rule END\n")
+
+	rule_file.write("Diff = " + str(j.diff) + "\n")
+	rule_file.write("Diff Rule START\n")
+	for z in j.diffRule:
+		rule_file.write(z[1]+" "+z[0][0]+ " " + z[0][1] + "\n")
+	rule_file.write("Diff Rule END\n")
+
+	rule_file.write("Group = " + str(j.group) + "\n")
+	rule_file.write("Group Rule START\n")
+	for z in j.groupRule:
+		rule_file.write(z[1]+" "+z[0][0]+ " " + z[0][1] + "\n")
+	rule_file.write("Group Rule END\n")
+	# print(j.target)
+	# print(j.diff)
+	# print(j.group)
+	# print("gourp")
+	# for z in j.groupRule:
+	# 	print(z)
+	# print("diff")
+	# for z in j.diffRule:
+	# 	print(z)
+rule_file.close()
+
 output_gds(chipDict, ID_TypeDict, UsedPinDict, chipLayerDict,output_name, layerDict)
 os.system("python InputParser.py " + clp_name + " " + netlist_name + " " + output_name + ".netlist")
 

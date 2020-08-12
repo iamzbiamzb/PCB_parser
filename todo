@@ -1,3 +1,9 @@
+/////
+net or pinpair 裡的 rule
+electricalCsetmatchGroup
+electricalNetRef
+
+
 4 net not in dcf
 b_06 electricalNet
 b_08 diff only one DDR4_MDQSN2 DDR4_MDQS2
@@ -66,5 +72,49 @@ b_11
 1 diffpair DDR_CLK_N/P 沒有tolerence
 被多個rule 規範的要特別處理嗎
 	還是把所有net的rule都做出來
+
+///
+b_03
+NG_DDR3_DQS_CLK 這group是真的沒有任何rule 不過她的net都是 diff
+
+2 	NG_SPI elecsetpair
+	NG_DDR_3  dont have any rule
+	NG_DIFF_DDR_DQS diff
+	
+
+	two target,target
+	( pinPair "U45.AL25:U61.F3"
+		( pinRef "U45.AL25" )
+		( pinRef "U61.F3" )
+		( attribute "RELATIVE_PROPAGATION_DELAY_SCOPE" "G"
+			( Parent
+				( matchGroupRef "MG_DDR_DQS" )
+			)
+			( Origin gBackEnd )
+		)
+		( attribute "RELATIVE_PROPAGATION_DELAY" "TARGET,TARGET"
+			( Parent
+				( matchGroupRef "MG_DDR_DQS" )
+			)
+			( Units "uMatchProp" "ns" 1.000000)
+			( Origin gBackEnd )
+		)
+		( attribute "RELATIVE_PROPAGATION_DELAY_SCOPE" "G"
+			( Parent
+				( matchGroupRef "MG_DDR_DQ0" )
+			)
+			( Origin gBackEnd )
+		)
+		( attribute "RELATIVE_PROPAGATION_DELAY" "TARGET,TARGET"
+			( Parent
+				( matchGroupRef "MG_DDR_DQ0" )
+			)
+			( Units "uMatchProp" "ns" 1.000000)
+			( Origin gBackEnd )
+		)
+	)
+
+13
+15
 
 

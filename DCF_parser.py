@@ -9,22 +9,6 @@ import re
 
 def output_gds(chipDict, ID_TypeDict, UsedPinDict, chipLayerDict, output_name, layerDict):
 	
-	# timeseq = "1995-04-17 18:00:00"
-	# file.write("gds2{600\n")
-	# file.write("m="+timeseq+" a="+timeseq+"\n");
-	# file.write("lib 'lib' 0.00025 2.5e-10\n");
-	# file.write("cell{c="+ timeseq +" m=" + timeseq + "'gdt'" + "\n")
-	# print("chipDict")
-	# for i,j in chipDict.items():
-	# 	print(i+" "+j)
-	# print("ID_TypeDict")
-	# for i,j in ID_TypeDict.items():
-	# 	print(i+" "+j)
-	# print("UsedPinDict")
-	# print(UsedPinDict)
-	# print("chipLayerDict")
-	# for i,j in chipLayerDict.items():
-	# 	print(i+" "+j)
 	obs_file = open(output_name+'.obs','w')
 	for i,j in chipDict.items():
 
