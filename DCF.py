@@ -346,7 +346,11 @@ def target(dcf_name):
 					if line.find('RELATIVE_PROPAGATION_DELAY')!=-1 and line.find('TARGET,TARGET')!=-1:
 						line = file.readline()
 						line = file.readline()
-						SignalTargetDict[signal_name] = line.split('"')[1]
+						if signal_name in SignalTargetDict:
+							SignalTargetDict[signal_name].append(line.split('"')[1])
+						else:
+							SignalTargetDict[signal_name] = [line.split('"')[1]]
+						
 					if line.find('( objectStatus "')!=-1 or line.find('( signal "')!=-1:
 						break
 			if line.find('( signal "')!=-1:
@@ -363,7 +367,10 @@ def target(dcf_name):
 					if line.find('RELATIVE_PROPAGATION_DELAY')!=-1 and line.find('TARGET,TARGET')!=-1:
 						line = file.readline()
 						line = file.readline()
-						PinpairTargetDict[pinpair_name] = line.split('"')[1]
+						if pinpair_name in PinpairTargetDict:
+							PinpairTargetDict[pinpair_name].append(line.split('"')[1])
+						else:
+							PinpairTargetDict[pinpair_name] = [line.split('"')[1]]
 					if line.find('( pinPair "')!=-1 or line.find('( electricalNet "')!=-1 or line.find('( signal "')!=-1:
 						break
 			if line.find('( pinPair "')!=-1:
@@ -589,9 +596,13 @@ def netrule(Final_Net_Dict,electricalDict,diffDict,diffRule,diffRef,groupDict,gr
 
 				netRuleDict[name].setgroupRule([i,key])
 				if j[0] in SignalTargetDict:
-					netRuleDict[name].settarget(key)
-				if j[1] in PinpairTargetDict:
-					netRuleDict[name].settarget(key)
+					for z in SignalTargetDict[j[0]]:
+						if z == key:
+							netRuleDict[name].settarget(key)
+				elif j[1] in PinpairTargetDict:
+					for z in PinpairTargetDict[j[1]]:
+						if z == key:
+							netRuleDict[name].settarget(key)
 	return netRuleDict
 
 def Usedpin(Final_Net_Dict):
@@ -632,6 +643,13 @@ print("++++++groupTolenece++++++")
 for i in groupTolenece:
 	print(i)
 	print(groupTolenece[i])
+print("++++++target++++++")
+for i in SignalTargetDict:
+	print(i)
+	print(SignalTargetDict[i])
+for i in PinpairTargetDict:
+	print(i)
+	print(PinpairTargetDict[i])
 print("++++++end++++++")
 
 drc_file = open(output_name+'.drc','w')
@@ -657,8 +675,28 @@ diff_file.close()
 layer_file = open(output_name+'.layer','w')
 layer_file.write(str(len(layerDict))+"\n")
 for keys, values in layerDict.items():
-	layer_file.write(keys+" "+str(values)+"\n")
+	layer_file.write(keys.replace(" ","_")+" "+str(values)+"\n")
 layer_file.close()
+
+group_rule_file = open(output_name+'.grouprule','w')
+group_target = {}
+for i in SignalTargetDict:
+	for j in SignalTargetDict[i]:
+		group_target[j] = i
+for i in PinpairTargetDict:
+	for j in PinpairTargetDict[i]:
+		group_target[j] = pinPairDict[i]
+print("vdsvdsvd")
+print(group_target)
+for i in groupTolenece:
+	group_rule_file.write(i+"\n")
+	for j in groupTolenece[i]:
+		group_rule_file.write(j[0]+" "+j[1].replace(',',' ')+"\n")
+	if i in group_target:
+		group_rule_file.write("target "+group_target[i]+"\n")
+	group_rule_file.write("end\n")
+
+group_rule_file.close()
 
 rule_file = open(output_name+'.rule','w')
 for i,j in netRuleDict.items():
@@ -683,7 +721,7 @@ for i,j in netRuleDict.items():
 	rule_file.write("Group = " + str(j.group) + "\n")
 	rule_file.write("Group Rule START\n")
 	for z in j.groupRule:
-		rule_file.write(z[1]+" "+z[0][0]+ " " + z[0][1] + "\n")
+		rule_file.write(z[1]+" "+z[0][0]+ " " + z[0][1].replace(',',' ') + "\n")
 	rule_file.write("Group Rule END\n")
 	# print(j.target)
 	# print(j.diff)
